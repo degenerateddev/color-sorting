@@ -1,7 +1,8 @@
 import Phaser from 'phaser';
 import { BottleSprite } from '../game/ui/Bottle';
+import { PourAnimation } from '../game/ui/Pour';
 import { setupGame } from '../game/logic/setup';
-import { pourLiquid } from '../game/logic/pour';
+import { getPourInfo } from '../game/logic/pour';
 import { checkWin } from '../game/logic/win';
 import type { GameState, SetupOptions } from '../game/logic/types';
 
@@ -12,6 +13,7 @@ export class GameScene extends Phaser.Scene {
     private moveCountText!: Phaser.GameObjects.Text;
     private levelText!: Phaser.GameObjects.Text;
     private currentLevel: number = 1;
+    private pourAnimation!: PourAnimation;
 
 	private globalHeight: number = 0;
 	private globalWidth: number = 0;
@@ -24,6 +26,7 @@ export class GameScene extends Phaser.Scene {
     }
 
     create() {
+        this.pourAnimation = new PourAnimation(this);
         this.startNewGame();
 
         this.add.text(this.globalWidth / 2, this.globalHeight * 0.1, "Liquid Sort", {
@@ -110,6 +113,9 @@ export class GameScene extends Phaser.Scene {
     }
 
     private onBottleClick(bottle: BottleSprite): void {
+        // Ignore clicks during pour animation
+        if (this.pourAnimation.isPlaying()) return;
+
         if (this.selectedBottle === null) {
             if (!bottle.isEmpty()) {
                 this.selectedBottle = bottle;
@@ -121,18 +127,38 @@ export class GameScene extends Phaser.Scene {
             this.selectedBottle = null;
 
         } else {
-            const result = pourLiquid(this.selectedBottle, bottle);
+            const pourInfo = getPourInfo(this.selectedBottle, bottle);
             
-            if (result.success) {
-                this.gameState.moveCount++;
-                this.moveCountText.setText(`Moves: ${this.gameState.moveCount}`);
-                
+            if (pourInfo.canPour && pourInfo.color) {
+                // Deselect the bottle visually before animation
                 this.selectedBottle.setSelected(false);
-                this.selectedBottle = null;
                 
-                if (checkWin(this.bottles)) {
-                    this.showWinMessage();
-                }
+                const sourceBottle = this.selectedBottle;
+                this.selectedBottle = null;
+
+                // Disable all bottles during animation
+                this.bottles.forEach(b => b.disableInteractive());
+                
+                // Play pour animation
+                this.pourAnimation.playPourAnimation({
+                    source: sourceBottle,
+                    target: bottle,
+                    color: pourInfo.color,
+                    segmentsToPour: pourInfo.segmentsToPour,
+                    onComplete: () => {
+                        // Update move count
+                        this.gameState.moveCount++;
+                        this.moveCountText.setText(`Moves: ${this.gameState.moveCount}`);
+                        
+                        // Re-enable all bottles
+                        this.bottles.forEach(b => b.setInteractive({ useHandCursor: true }));
+                        
+                        // Check for win
+                        if (checkWin(this.bottles)) {
+                            this.showWinMessage();
+                        }
+                    }
+                });
             } else {
                 // pour failed
                 this.selectedBottle.setSelected(false);
