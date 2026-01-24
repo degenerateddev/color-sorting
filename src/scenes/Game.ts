@@ -18,13 +18,13 @@ export class GameScene extends Phaser.Scene {
 
     constructor() {
         super({ key: 'GameScene' });
+
+		this.globalHeight = window.innerHeight; // this.cameras.main.height;
+		this.globalWidth = window.innerWidth; 	// this.cameras.main.width;
     }
 
     create() {
         this.startNewGame();
-
-		this.globalHeight = this.cameras.main.height;
-		this.globalWidth = this.cameras.main.width;
 
         this.add.text(this.globalWidth / 2, this.globalHeight * 0.1, "Liquid Sort", {
             fontSize: "32px",
@@ -83,15 +83,22 @@ export class GameScene extends Phaser.Scene {
         const rows = Math.ceil(numBottles / bottlesPerRow);
         
         const startY = rows > 1 ? 300 : 380;
-		const startX = 100;
         const spacingX = 100;
         const spacingY = 200;
 
         this.gameState.bottles.forEach((bottleData, index) => {
             const row = Math.floor(index / bottlesPerRow);
             const col = index % bottlesPerRow;
+
+			let startX: number;
             
-            const x = startX + col * spacingX;
+			if (index === this.gameState.bottles.length - 1) {
+				startX = this.globalWidth / 2 - 50;
+			} else {
+				startX = 55;
+			}
+
+			const x = startX + col * spacingX;
             const y = startY + row * spacingY;
 
             const bottle = new BottleSprite(this, x, y, bottleData);
