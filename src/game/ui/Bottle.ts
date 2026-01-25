@@ -6,6 +6,7 @@ export class BottleSprite extends Phaser.GameObjects.Container {
     private liquidGraphics: Phaser.GameObjects.Graphics;
     private bottleData: BottleData;
     private selected: boolean = false;
+    private originalY: number = 0;
     
     private readonly BOTTLE_WIDTH = 60;
     private readonly BOTTLE_HEIGHT = 160;
@@ -18,6 +19,7 @@ export class BottleSprite extends Phaser.GameObjects.Container {
         super(scene, x, y);
         
         this.bottleData = bottleData;
+        this.originalY = y;
         this.SLOT_HEIGHT = (this.BOTTLE_HEIGHT - this.NECK_HEIGHT - this.LIQUID_PADDING * 2) / bottleData.slots;
         
         this.liquidGraphics = scene.add.graphics();
@@ -86,17 +88,19 @@ export class BottleSprite extends Phaser.GameObjects.Container {
 
     setSelected(selected: boolean): void {
         this.selected = selected;
+        this.scene.tweens.killTweensOf(this);
+        
         if (selected) {
             this.scene.tweens.add({
                 targets: this,
-                y: this.y - 20,
+                y: this.originalY - 20,
                 duration: 150,
                 ease: 'Back.easeOut'
             });
         } else {
             this.scene.tweens.add({
                 targets: this,
-                y: this.y + 20,
+                y: this.originalY,
                 duration: 150,
                 ease: 'Back.easeIn'
             });
