@@ -1,17 +1,17 @@
 import type { Bottle, Color, GameState, SetupOptions } from "./types";
 
 const PRESET_COLORS: string[] = [
-    '#FF6B6B', // Red
-    '#4ECDC4', // Teal
-    '#45B7D1', // Sky Blue
-    '#FFEAA7', // Yellow
-    '#DDA0DD', // Plum
-	'#6A0DAD', // Royal Purple
-    '#98D8C8', // Mint
-    '#85C1E9', // Light Blue
-    '#F8B500', // Orange
-    '#58D68D', // Green
-	'#D35400'  // Dark Orange
+    '#FF6B6B',
+    '#4ECDC4',
+    '#45B7D1',
+    '#FFEAA7',
+    '#DDA0DD',
+	'#6A0DAD',
+    '#98D8C8',
+    '#85C1E9',
+    '#F8B500',
+    '#58D68D',
+	'#D35400'
 ];
 
 export function setupGame(options: SetupOptions = { numColors: 4, slotsPerBottle: 4, emptyBottles: 2 }): GameState {

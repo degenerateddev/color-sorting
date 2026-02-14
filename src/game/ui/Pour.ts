@@ -36,8 +36,13 @@ export class PourAnimation {
         this.isAnimating = true;
         const { source, target, color, segmentsToPour, onComplete } = config;
 
+        // Kill any lingering tweens (e.g. from deselect) to prevent conflicts
+        this.scene.tweens.killTweensOf(source);
+
+        // Use the bottle's true resting position, not the current (possibly mid-tween) y
         const originalX = source.x;
-        const originalY = source.y;
+        const originalY = source.getOriginalY();
+        source.y = originalY;
 
         // calculate direction according to position
         const pourLeft = source.x > target.x;

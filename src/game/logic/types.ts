@@ -6,12 +6,14 @@ export interface Bottle {
 	colors: Color[];
 	slots: number;			// number of color slots in the bottle
 	hiddenColors?: boolean;	// if true, only first color is being shown
+	isGlass?: boolean;		// if true, renders as a glass instead of a bottle
 }
 
 export interface GameState {
 	bottles: Bottle[];
 	additionalBottles: number;
 	moveCount: number;
+	isSpecial?: boolean;	// special level with effects
 }
 
 export interface SetupOptions {
