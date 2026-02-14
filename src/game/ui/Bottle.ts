@@ -28,11 +28,11 @@ export class BottleSprite extends Phaser.GameObjects.Container {
     private static readonly GLASS_TOTAL_HEIGHT = 80;
 
     private static readonly REF_SLOTS = 4;
-    private static readonly REF_WIDTH = 60;
-    private static readonly REF_HEIGHT = 160;
+    private static readonly REF_WIDTH = 75;
+    private static readonly REF_HEIGHT = 180;
     private static readonly REF_NECK_WIDTH = 30;
     private static readonly REF_NECK_HEIGHT = 15;
-    private static readonly MIN_SCALE = 0.45;
+    private static readonly MAX_SCALE = 1.25;
 
     constructor(scene: Phaser.Scene, x: number, y: number, bottleData: BottleData) {
         super(scene, x, y);
@@ -49,10 +49,12 @@ export class BottleSprite extends Phaser.GameObjects.Container {
             this.NECK_HEIGHT = 0;
             this.SLOT_HEIGHT = BottleSprite.GLASS_BOWL_HEIGHT - this.LIQUID_PADDING * 2;
         } else {
-            const scale = Math.max(
-                BottleSprite.MIN_SCALE,
-                bottleData.slots / BottleSprite.REF_SLOTS
+            // start with largest scale and reduce if too many slots, to ensure it fits on screen
+            const scale = Math.min(
+                BottleSprite.MAX_SCALE,
+                BottleSprite.REF_SLOTS / bottleData.slots
             );
+            console.log(scale);
             this.BOTTLE_WIDTH = Math.round(BottleSprite.REF_WIDTH * scale);
             this.BOTTLE_HEIGHT = Math.round(BottleSprite.REF_HEIGHT * scale);
             this.NECK_WIDTH = Math.round(BottleSprite.REF_NECK_WIDTH * scale);

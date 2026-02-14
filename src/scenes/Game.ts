@@ -130,6 +130,7 @@ export class GameScene extends Phaser.Scene {
         this.bottles = [];
         this.selectedBottle = null;
         this.extraBottlesUsed = 0;
+        
         if (this.resetBtn) this.resetBtn.setVisible(false);
         this.updateAddBottleBtn();
 
