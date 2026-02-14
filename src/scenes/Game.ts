@@ -32,37 +32,39 @@ export class GameScene extends Phaser.Scene {
 
     constructor() {
         super({ key: 'GameScene' });
-
-		this.globalHeight = window.innerHeight; // this.cameras.main.height;
-		this.globalWidth = window.innerWidth; 	// this.cameras.main.width;
     }
 
     create() {
+        this.globalWidth = this.cameras.main.width;
+        this.globalHeight = this.cameras.main.height;
+
         this.pourAnimation = new PourAnimation(this);
 
         if (!this.loadGame()) {
             this.startNewGame();
         }
 
+        const fs = this.responsiveFontSizes();
+
         /* UI Elements */
-        this.add.text(this.globalWidth / 2, this.globalHeight * 0.1, "Liquid Sort", {
-            fontSize: "32px",
+        this.add.text(this.globalWidth / 2, this.globalHeight * 0.04, "Liquid Sort", {
+            fontSize: `${fs.title}px`,
             color: "#ffffff",
             fontStyle: "bold"
         }).setOrigin(0.5);
 
-        this.levelText = this.add.text(this.globalWidth / 2, this.globalHeight * 0.15, `Level ${this.currentLevel}`, {
-            fontSize: "20px",
+        this.levelText = this.add.text(this.globalWidth / 2, this.globalHeight * 0.08, `Level ${this.currentLevel}`, {
+            fontSize: `${fs.subtitle}px`,
             color: "#aaaaaa"
         }).setOrigin(0.5);
 
-        this.moveCountText = this.add.text(this.globalWidth / 2, this.globalHeight * 0.9, `Moves: 0`, {
-            fontSize: "18px",
+        this.moveCountText = this.add.text(this.globalWidth / 2, this.globalHeight * 0.88, `Moves: 0`, {
+            fontSize: `${fs.body}px`,
             color: "#ffffff"
         }).setOrigin(0.5);
 
-        const restartBtn = this.add.text(this.globalWidth / 2, this.globalHeight * 0.95, "🔄 Restart", {
-            fontSize: "18px",
+        const restartBtn = this.add.text(this.globalWidth / 2, this.globalHeight * 0.93, "🔄 Restart", {
+            fontSize: `${fs.body}px`,
             color: "#ffffff",
             backgroundColor: "#333333",
             padding: { x: 10, y: 5 }
@@ -72,8 +74,8 @@ export class GameScene extends Phaser.Scene {
         restartBtn.on('pointerover', () => restartBtn.setStyle({ backgroundColor: '#555555' }));
         restartBtn.on('pointerout', () => restartBtn.setStyle({ backgroundColor: '#333333' }));
 
-        this.addBottleBtn = this.add.text(this.globalWidth / 2, this.globalHeight * 0.85, "+ Glass (2)", {
-            fontSize: "18px",
+        this.addBottleBtn = this.add.text(this.globalWidth / 2, this.globalHeight * 0.83, "+ Glass (2)", {
+            fontSize: `${fs.body}px`,
             color: "#ffffff",
             backgroundColor: "#2a6e2a",
             padding: { x: 10, y: 5 }
@@ -87,14 +89,14 @@ export class GameScene extends Phaser.Scene {
             if (this.extraBottlesUsed < 2) this.addBottleBtn.setStyle({ backgroundColor: '#2a6e2a' });
         });
 
-        this.specialText = this.add.text(this.globalWidth / 2, this.globalHeight * 0.19, '', {
-            fontSize: '16px',
+        this.specialText = this.add.text(this.globalWidth / 2, this.globalHeight * 0.115, '', {
+            fontSize: `${fs.small}px`,
             color: '#ff44ff',
             fontStyle: 'bold'
         }).setOrigin(0.5);
 
-        this.resetBtn = this.add.text(this.globalWidth / 2, this.globalHeight * 0.80, '⚠ Reset Level', {
-            fontSize: '18px',
+        this.resetBtn = this.add.text(this.globalWidth / 2, this.globalHeight * 0.78, '⚠ Reset Level', {
+            fontSize: `${fs.body}px`,
             color: '#ffffff',
             backgroundColor: '#aa3333',
             padding: { x: 10, y: 5 }
@@ -153,13 +155,65 @@ export class GameScene extends Phaser.Scene {
     }
 
     private createBottleSprites(): void {
+        const w = this.globalWidth;
+        const h = this.globalHeight;
         const numBottles = this.gameState.bottles.length;
-        const bottlesPerRow = Math.min(numBottles, 4);
+
+        // --- Available area for the bottle grid ---
+        const areaTopY = h * 0.13;
+        const areaBotY = h * 0.78;
+        const areaH = areaBotY - areaTopY;
+        const sidePadding = 20;
+        const usableWidth = w - sidePadding * 2;
+
+        // Reference bottle dimensions (unscaled)
+        const refBottleW = 60;
+        const refBottleH = 160;
+        // Minimum gap between bottle edges
+        const gapX = 28;
+        const gapY = 45;
+
+        const maxPerRow = 4;
+
+        // Determine rows needed
+        const bottlesPerRow = Math.min(numBottles, maxPerRow);
         const rows = Math.ceil(numBottles / bottlesPerRow);
-        
-        const startY = 500;
-        const spacingX = 100;
-        const spacingY = 250;
+
+        // --- Compute the largest scale at which everything fits ---
+        // Horizontal constraint: (bottlesPerRow * W + (bottlesPerRow-1) * gap) <= usableWidth
+        const maxScaleX = bottlesPerRow > 1
+            ? (usableWidth - (bottlesPerRow - 1) * gapX) / (bottlesPerRow * refBottleW)
+            : usableWidth / refBottleW;
+        // Vertical constraint: (rows * H + (rows-1) * gap) <= areaH
+        const maxScaleY = rows > 1
+            ? (areaH - (rows - 1) * gapY) / (rows * refBottleH)
+            : areaH / refBottleH;
+
+        // Also apply the base mobile scale
+        const mobileScale = Math.min(1, w / 500, h / 700);
+
+        const bottleScale = Math.max(0.4, Math.min(mobileScale, maxScaleX, maxScaleY, 1));
+
+        const scaledBottleW = refBottleW * bottleScale;
+        const scaledBottleH = refBottleH * bottleScale;
+
+        // Spacing between bottle centres
+        const spacingX = bottlesPerRow > 1
+            ? Math.min(
+                (usableWidth) / (bottlesPerRow - 1),
+                scaledBottleW + gapX
+              )
+            : 0;
+
+        const spacingY = rows > 1
+            ? Math.min(
+                areaH / rows,
+                scaledBottleH + gapY
+              )
+            : 0;
+
+        const totalGridH = (rows - 1) * spacingY;
+        const startY = areaTopY + (areaH - totalGridH) / 2;
 
         this.gameState.bottles.forEach((bottleData, index) => {
             const row = Math.floor(index / bottlesPerRow);
@@ -170,15 +224,16 @@ export class GameScene extends Phaser.Scene {
                 : numBottles - row * bottlesPerRow;
 
             const rowWidth = (bottlesInThisRow - 1) * spacingX;
-            const startX = (this.globalWidth - rowWidth) / 2;
+            const startX = (w - rowWidth) / 2;
 
-			const x = startX + col * spacingX;
+            const x = startX + col * spacingX;
             const y = startY + row * spacingY;
 
             const bottle = new BottleSprite(this, x, y, bottleData);
-            
+            bottle.setScale(bottleScale);
+
             bottle.on('pointerdown', () => this.onBottleClick(bottle));
-            
+
             this.bottles.push(bottle);
         });
     }
@@ -277,23 +332,26 @@ export class GameScene extends Phaser.Scene {
     }
 
     private showWinMessage(): void {
-        const overlay = this.add.rectangle(0, 0, this.globalWidth * 2, this.globalHeight * 2, 0x000000, 0.8);
+        const w = this.globalWidth;
+        const h = this.globalHeight;
+        const fs = this.responsiveFontSizes();
+        const overlay = this.add.rectangle(0, 0, w * 2, h * 2, 0x000000, 0.8);
 
-		this.bottles.forEach(bottle => bottle.disableInteractive());
-        
-        const winText = this.add.text(this.globalWidth / 2, 250, "🎉 You Win! 🎉", {
-            fontSize: "48px",
+        this.bottles.forEach(bottle => bottle.disableInteractive());
+
+        const winText = this.add.text(w / 2, h * 0.32, "🎉 You Win! 🎉", {
+            fontSize: `${fs.title + 8}px`,
             color: "#FFD700",
             fontStyle: "bold"
         }).setOrigin(0.5);
 
-        const movesText = this.add.text(this.globalWidth / 2, 310, `Completed in ${this.gameState.moveCount} moves`, {
-            fontSize: "24px",
+        const movesText = this.add.text(w / 2, h * 0.40, `Completed in ${this.gameState.moveCount} moves`, {
+            fontSize: `${fs.subtitle}px`,
             color: "#ffffff"
         }).setOrigin(0.5);
 
-        const nextBtn = this.add.text(this.globalWidth / 2, 380, "Next Level →", {
-            fontSize: "24px",
+        const nextBtn = this.add.text(w / 2, h * 0.48, "Next Level →", {
+            fontSize: `${fs.subtitle}px`,
             color: "#ffffff",
             backgroundColor: "#4CAF50",
             padding: { x: 20, y: 10 }
@@ -313,30 +371,33 @@ export class GameScene extends Phaser.Scene {
     }
 
     private showStuckMessage(): void {
-        const overlay = this.add.rectangle(0, 0, this.globalWidth * 2, this.globalHeight * 2, 0x000000, 0.8);
+        const w = this.globalWidth;
+        const h = this.globalHeight;
+        const fs = this.responsiveFontSizes();
+        const overlay = this.add.rectangle(0, 0, w * 2, h * 2, 0x000000, 0.8);
 
         this.bottles.forEach(bottle => bottle.disableInteractive());
 
-        const stuckText = this.add.text(this.globalWidth / 2, 250, 'No Moves Left!', {
-            fontSize: '42px',
+        const stuckText = this.add.text(w / 2, h * 0.32, 'No Moves Left!', {
+            fontSize: `${fs.title + 4}px`,
             color: '#FF6B6B',
             fontStyle: 'bold'
         }).setOrigin(0.5);
 
-        const hintText = this.add.text(this.globalWidth / 2, 310, 'You can reset the level or keep looking.', {
-            fontSize: '18px',
+        const hintText = this.add.text(w / 2, h * 0.40, 'You can reset the level or keep looking.', {
+            fontSize: `${fs.body}px`,
             color: '#aaaaaa'
         }).setOrigin(0.5);
 
-        const resetBtn = this.add.text(this.globalWidth / 2, 380, '🔄 Reset Level', {
-            fontSize: '24px',
+        const resetBtn = this.add.text(w / 2, h * 0.48, '🔄 Reset Level', {
+            fontSize: `${fs.subtitle}px`,
             color: '#ffffff',
             backgroundColor: '#aa3333',
             padding: { x: 20, y: 10 }
         }).setOrigin(0.5).setInteractive({ useHandCursor: true });
 
-        const closeBtn = this.add.text(this.globalWidth / 2, 440, 'Close', {
-            fontSize: '20px',
+        const closeBtn = this.add.text(w / 2, h * 0.55, 'Close', {
+            fontSize: `${fs.body}px`,
             color: '#cccccc',
             backgroundColor: '#444444',
             padding: { x: 20, y: 8 }
@@ -403,5 +464,16 @@ export class GameScene extends Phaser.Scene {
         } catch {
             return false;
         }
+    }
+
+    private responsiveFontSizes() {
+        const w = this.globalWidth;
+        const base = Math.min(w, 600);
+        return {
+            title:    Math.round(Math.max(20, base * 0.055)),
+            subtitle: Math.round(Math.max(16, base * 0.04)),
+            body:     Math.round(Math.max(14, base * 0.032)),
+            small:    Math.round(Math.max(12, base * 0.028)),
+        };
     }
 }
