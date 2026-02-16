@@ -33,6 +33,7 @@ export class BottleSprite extends Phaser.GameObjects.Container {
     private static readonly REF_NECK_WIDTH = 30;
     private static readonly REF_NECK_HEIGHT = 15;
     private static readonly MAX_SCALE = 1.25;
+    private static readonly MIN_SCALE = 1;
 
     constructor(scene: Phaser.Scene, x: number, y: number, bottleData: BottleData) {
         super(scene, x, y);
@@ -52,7 +53,7 @@ export class BottleSprite extends Phaser.GameObjects.Container {
             // start with largest scale and reduce if too many slots, to ensure it fits on screen
             const scale = Math.min(
                 BottleSprite.MAX_SCALE,
-                BottleSprite.REF_SLOTS / bottleData.slots
+                Math.max(BottleSprite.MIN_SCALE, BottleSprite.REF_SLOTS / bottleData.slots)
             );
             console.log(scale);
             this.BOTTLE_WIDTH = Math.round(BottleSprite.REF_WIDTH * scale);
