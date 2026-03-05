@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
 import { BottleSprite } from '../game/ui/Bottle';
 import { PourAnimation } from '../game/ui/Pour';
-import { setupGame } from '../game/logic/setup';
+import { setupGame, PRESET_COLORS } from '../game/logic/setup';
 import { getPourInfo } from '../game/logic/pour';
 import { checkWin, isGameStuck } from '../game/logic/win';
 import type { GameState, SetupOptions } from '../game/logic/types';
@@ -49,13 +49,7 @@ export class GameScene extends Phaser.Scene {
         const fs = this.responsiveFontSizes();
 
         /* UI Elements */
-        this.add.text(this.globalWidth / 2, this.globalHeight * 0.04, "Liquid Sort", {
-            fontSize: `${fs.title}px`,
-            color: "#ffffff",
-            fontStyle: "bold"
-        }).setOrigin(0.5);
-
-        this.levelText = this.add.text(this.globalWidth / 2, this.globalHeight * 0.08, `Level ${this.currentLevel}`, {
+        this.levelText = this.add.text(this.globalWidth / 2, this.globalHeight * 0.08, `LEVEL ${this.currentLevel}`, {
             fontSize: `${fs.subtitle}px`,
             color: "#aaaaaa",
             fontStyle: "bold"
@@ -137,10 +131,15 @@ export class GameScene extends Phaser.Scene {
         if (this.resetBtn) this.resetBtn.setVisible(false);
         this.updateAddBottleBtn();
 
+        const bonusEmptyBottles = Math.floor(this.currentLevel / this.newBottleLevelThreshold);
+        const bonusGlasses = Math.floor(this.currentLevel / this.newGlassLevelThreshold);
+        const baseColors = Math.min(4 + Math.floor(this.currentLevel / 3), 10);
+        const numColors = Math.min(baseColors + bonusEmptyBottles + bonusGlasses, PRESET_COLORS.length);
+
         const options: SetupOptions = {
-            numColors: Math.min(4 + Math.floor(this.currentLevel / 3), 10),
+            numColors,
             slotsPerBottle: Math.min(4 + Math.floor(this.currentLevel / 5), 10),
-            emptyBottles: 2 + Math.floor(this.currentLevel / this.newBottleLevelThreshold)
+            emptyBottles: 2 + bonusEmptyBottles
         };
 
         this.gameState = setupGame(options);
