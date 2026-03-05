@@ -23,6 +23,8 @@ export class GameScene extends Phaser.Scene {
     private currentLevel: number = 1;
     private pourAnimation!: PourAnimation;
     private extraBottlesUsed: number = 0;
+    private newBottleLevelThreshold: number = 12;
+    private newGlassLevelThreshold: number = 20;
     private addBottleBtn!: Phaser.GameObjects.Text;
     private specialText!: Phaser.GameObjects.Text;
     private resetBtn!: Phaser.GameObjects.Text;
@@ -55,7 +57,8 @@ export class GameScene extends Phaser.Scene {
 
         this.levelText = this.add.text(this.globalWidth / 2, this.globalHeight * 0.08, `Level ${this.currentLevel}`, {
             fontSize: `${fs.subtitle}px`,
-            color: "#aaaaaa"
+            color: "#aaaaaa",
+            fontStyle: "bold"
         }).setOrigin(0.5);
 
         this.moveCountText = this.add.text(this.globalWidth / 2, this.globalHeight * 0.88, `Moves: 0`, {
@@ -83,10 +86,10 @@ export class GameScene extends Phaser.Scene {
 
         this.addBottleBtn.on('pointerdown', () => this.addExtraBottle());
         this.addBottleBtn.on('pointerover', () => {
-            if (this.extraBottlesUsed < 2) this.addBottleBtn.setStyle({ backgroundColor: '#3a8e3a' });
+            if (this.extraBottlesUsed < this.maxGlasses()) this.addBottleBtn.setStyle({ backgroundColor: '#3a8e3a' });
         });
         this.addBottleBtn.on('pointerout', () => {
-            if (this.extraBottlesUsed < 2) this.addBottleBtn.setStyle({ backgroundColor: '#2a6e2a' });
+            if (this.extraBottlesUsed < this.maxGlasses()) this.addBottleBtn.setStyle({ backgroundColor: '#2a6e2a' });
         });
 
         this.specialText = this.add.text(this.globalWidth / 2, this.globalHeight * 0.115, '', {
@@ -137,7 +140,7 @@ export class GameScene extends Phaser.Scene {
         const options: SetupOptions = {
             numColors: Math.min(4 + Math.floor(this.currentLevel / 3), 10),
             slotsPerBottle: Math.min(4 + Math.floor(this.currentLevel / 5), 10),
-            emptyBottles: 2
+            emptyBottles: 2 + Math.floor(this.currentLevel / this.newBottleLevelThreshold)
         };
 
         this.gameState = setupGame(options);
@@ -295,8 +298,12 @@ export class GameScene extends Phaser.Scene {
         }
     }
 
+    private maxGlasses(): number {
+        return 2 + Math.floor(this.currentLevel / this.newGlassLevelThreshold);
+    }
+
     private addExtraBottle(): void {
-        if (this.extraBottlesUsed >= 2) return;
+        if (this.extraBottlesUsed >= this.maxGlasses()) return;
         if (this.pourAnimation.isPlaying()) return;
 
         if (this.selectedBottle) {
@@ -320,7 +327,7 @@ export class GameScene extends Phaser.Scene {
 
     private updateAddBottleBtn(): void {
         if (!this.addBottleBtn) return;
-        const remaining = 2 - this.extraBottlesUsed;
+        const remaining = this.maxGlasses() - this.extraBottlesUsed;
         if (remaining <= 0) {
             this.addBottleBtn.setText("+ Glass (0)");
             this.addBottleBtn.setStyle({ backgroundColor: '#555555', color: '#888888' });
@@ -440,6 +447,12 @@ export class GameScene extends Phaser.Scene {
         } catch {
             // localStorage may be unavailable; silently ignore
         }
+    }
+
+    public jumpToLevel(level: number): void {
+        this.currentLevel = Math.max(1, Math.round(level));
+        this.startNewGame();
+        console.log(`Game reset to level ${this.currentLevel}`);
     }
 
     private loadGame(): boolean {

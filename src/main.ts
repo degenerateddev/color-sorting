@@ -13,4 +13,17 @@ const config: Phaser.Types.Core.GameConfig = {
   scene: [GameScene]
 };
 
-new Phaser.Game(config as any);
+const game = new Phaser.Game(config as any);
+
+/**
+ * Dev-tools helper: reset the game to the given level with fresh random data.
+ * Usage in browser console: setLevel(15)
+ */
+(window as any).setLevel = (level: number) => {
+  const scene = game.scene.getScene('GameScene') as GameScene;
+  if (!scene) {
+    console.error('GameScene not found');
+    return;
+  }
+  scene.jumpToLevel(level);
+};
