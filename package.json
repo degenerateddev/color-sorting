@@ -13,7 +13,6 @@
     "vite": "^7.2.4"
   },
   "dependencies": {
-    "@develephant/types-phaser": "^1.0.1",
     "phaser": "^3.90.0"
   }
 }

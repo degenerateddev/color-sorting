@@ -20,14 +20,7 @@
     "noUnusedParameters": true,
     "erasableSyntaxOnly": true,
     "noFallthroughCasesInSwitch": true,
-    "noUncheckedSideEffectImports": true,
-
-    "typeRoots": [
-      "node_modules/@develephant/types-phaser",
-      "node_modules/@types/",
-      "./types",
-      "./node_modules"
-    ] 
+    "noUncheckedSideEffectImports": true
   },
   "include": ["src"]
 }
