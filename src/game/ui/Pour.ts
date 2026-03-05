@@ -17,7 +17,7 @@ export class PourAnimation {
 
     private readonly TILT_ANGLE = 45;
     private readonly TILT_DURATION = 200;
-    private readonly POUR_DURATION = 150;
+    private readonly POUR_DURATION = 150; //150
     private readonly RETURN_DURATION = 200;
 
     constructor(scene: Phaser.Scene) {
@@ -136,6 +136,7 @@ export class PourAnimation {
                     this.drawStream(startX, startY, endX, endY, controlX, controlY, progress, colorNum, streamWidth);
                 },
                 onComplete: () => {
+                    this.playPourSound();
                     this.playSplashEffect(endX, endY, colorNum);
                     this.streamGraphics.clear();
                     resolve();
@@ -205,6 +206,24 @@ export class PourAnimation {
                 ease: 'Quad.easeOut',
                 onComplete: () => particle.destroy()
             });
+        }
+    }
+
+    private playPourSound(): void {
+        const base = '/sounds/base.wav';
+        const alternatives = ['/sounds/gluck.wav', '/sounds/ngu.wav', '/sounds/base_hall.wav'];
+
+        const useAlt = Math.random() < 0.3;
+        const chosen = useAlt
+            ? alternatives[Math.floor(Math.random() * alternatives.length)]
+            : base;
+
+        try {
+            const audio = new Audio(chosen);
+            audio.volume = 0.7;
+            void audio.play();
+        } catch {
+            // ignore play errors
         }
     }
 
