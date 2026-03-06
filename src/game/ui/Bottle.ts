@@ -51,15 +51,15 @@ export class BottleSprite extends Phaser.GameObjects.Container {
             this.SLOT_HEIGHT = BottleSprite.GLASS_BOWL_HEIGHT - this.LIQUID_PADDING * 2;
         } else {
             // start with largest scale and reduce if too many slots, to ensure it fits on screen
-            const scale = Math.min(
+            /* const scale = Math.min(
                 BottleSprite.MAX_SCALE,
                 Math.max(BottleSprite.MIN_SCALE, BottleSprite.REF_SLOTS / bottleData.slots)
-            );
-            console.log(scale);
-            this.BOTTLE_WIDTH = Math.round(BottleSprite.REF_WIDTH * scale);
-            this.BOTTLE_HEIGHT = Math.round(BottleSprite.REF_HEIGHT * scale);
-            this.NECK_WIDTH = Math.round(BottleSprite.REF_NECK_WIDTH * scale);
-            this.NECK_HEIGHT = Math.round(BottleSprite.REF_NECK_HEIGHT * scale);
+            ); */
+
+            this.BOTTLE_WIDTH = Math.round(BottleSprite.REF_WIDTH); // * scale (for bottle/neck width, height)
+            this.BOTTLE_HEIGHT = Math.round(BottleSprite.REF_HEIGHT);
+            this.NECK_WIDTH = Math.round(BottleSprite.REF_NECK_WIDTH);
+            this.NECK_HEIGHT = Math.round(BottleSprite.REF_NECK_HEIGHT);
             this.SLOT_HEIGHT = (this.BOTTLE_HEIGHT - this.NECK_HEIGHT - this.LIQUID_PADDING * 2) / bottleData.slots;
         }
         
@@ -121,7 +121,6 @@ export class BottleSprite extends Phaser.GameObjects.Container {
         const bowlBottomY = topY + bowlH;
         const stemBottomY = bowlBottomY + stemH;
 
-        // --- Glass-like translucent fill for the bowl ---
         this.bottleGraphics.fillStyle(0xffffff, 0.06);
         this.bottleGraphics.beginPath();
         this.bottleGraphics.moveTo(-rimW / 2, topY);
@@ -131,7 +130,6 @@ export class BottleSprite extends Phaser.GameObjects.Container {
         this.bottleGraphics.closePath();
         this.bottleGraphics.fillPath();
 
-        // --- Bowl outline (trapezoid) ---
         this.bottleGraphics.lineStyle(2, 0xcccccc, 0.9);
         this.bottleGraphics.beginPath();
         this.bottleGraphics.moveTo(-rimW / 2, topY);
@@ -140,14 +138,12 @@ export class BottleSprite extends Phaser.GameObjects.Container {
         this.bottleGraphics.lineTo(rimW / 2, topY);
         this.bottleGraphics.strokePath();
 
-        // Rim highlight
         this.bottleGraphics.lineStyle(2, 0xffffff, 0.45);
         this.bottleGraphics.beginPath();
         this.bottleGraphics.moveTo(-rimW / 2 + 1, topY);
         this.bottleGraphics.lineTo(rimW / 2 - 1, topY);
         this.bottleGraphics.strokePath();
 
-        // --- Stem ---
         this.bottleGraphics.lineStyle(2, 0xcccccc, 0.9);
         this.bottleGraphics.beginPath();
         this.bottleGraphics.moveTo(-stemW / 2, bowlBottomY);
@@ -158,14 +154,12 @@ export class BottleSprite extends Phaser.GameObjects.Container {
         this.bottleGraphics.lineTo(stemW / 2, stemBottomY);
         this.bottleGraphics.strokePath();
 
-        // Stem shine
         this.bottleGraphics.lineStyle(1, 0xffffff, 0.2);
         this.bottleGraphics.beginPath();
         this.bottleGraphics.moveTo(0, bowlBottomY + 2);
         this.bottleGraphics.lineTo(0, stemBottomY - 2);
         this.bottleGraphics.strokePath();
 
-        // --- Base (ellipse-like rounded rect) ---
         this.bottleGraphics.lineStyle(2, 0xcccccc, 0.9);
         this.bottleGraphics.strokeRoundedRect(
             -baseW / 2, stemBottomY,
@@ -173,7 +167,6 @@ export class BottleSprite extends Phaser.GameObjects.Container {
             baseH / 2
         );
 
-        // Base fill (subtle)
         this.bottleGraphics.fillStyle(0xffffff, 0.08);
         this.bottleGraphics.fillRoundedRect(
             -baseW / 2, stemBottomY,
@@ -181,10 +174,9 @@ export class BottleSprite extends Phaser.GameObjects.Container {
             baseH / 2
         );
 
-        // --- Glass shine line on left side of bowl ---
         this.bottleGraphics.lineStyle(1.5, 0xffffff, 0.18);
         this.bottleGraphics.beginPath();
-        // Inset shine along the left wall of the trapezoid
+
         const shineTopX = -rimW / 2 + 6;
         const shineBotX = -botW / 2 + 4;
         this.bottleGraphics.moveTo(shineTopX, topY + 6);
@@ -269,7 +261,6 @@ export class BottleSprite extends Phaser.GameObjects.Container {
         const color = this.bottleData.colors[0];
         const colorNum = Phaser.Display.Color.HexStringToColor(color.code).color;
 
-        // Draw liquid as a trapezoid matching the glass curvature
         this.liquidGraphics.fillStyle(colorNum, 0.9);
         this.liquidGraphics.beginPath();
         this.liquidGraphics.moveTo(-topW / 2, liquidTopY);
@@ -279,11 +270,9 @@ export class BottleSprite extends Phaser.GameObjects.Container {
         this.liquidGraphics.closePath();
         this.liquidGraphics.fillPath();
 
-        // Highlight on the liquid surface
         this.liquidGraphics.fillStyle(0xffffff, 0.15);
         this.liquidGraphics.fillRect(-topW / 2 + 3, liquidTopY, topW - 6, 2);
 
-        // Shadow on right side of liquid
         this.liquidGraphics.fillStyle(0x000000, 0.1);
         this.liquidGraphics.beginPath();
         this.liquidGraphics.moveTo(topW / 2 - 6, liquidTopY);
@@ -321,6 +310,10 @@ export class BottleSprite extends Phaser.GameObjects.Container {
 
     getOriginalY(): number {
         return this.originalY;
+    }
+
+    setOriginalY(y: number): void {
+        this.originalY = y;
     }
 
     getBottleData(): BottleData {

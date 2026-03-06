@@ -32,13 +32,34 @@ export class GameScene extends Phaser.Scene {
 	private globalHeight: number = 0;
 	private globalWidth: number = 0;
 
+    private glassSprites: BottleSprite[] = [];
+    private scrollOffset: number = 0;
+    private maxScrollOffset: number = 0;
+    private bottleBasePositions: { x: number; y: number }[] = [];
+    private bottleMaskShape!: Phaser.GameObjects.Graphics;
+    private bottleAreaTopY: number = 0;
+    private bottleAreaBotY: number = 0;
+    private glassAreaTopY: number = 0;
+    private pointerStartY: number = 0;
+    private pointerStartScrollOffset: number = 0;
+    private isScrollDrag: boolean = false;
+
     constructor() {
-        super({ key: 'GameScene' });
+        super({ key: 'Color Sort' });
+    }
+
+    preload() {
+        this.load.svg('restart-icon', 'ui/restart-square.svg', { width: 256, height: 256 });
+        this.load.svg('add-icon', 'ui/add-square.svg', { width: 256, height: 256 });
     }
 
     create() {
         this.globalWidth = this.cameras.main.width;
         this.globalHeight = this.cameras.main.height;
+
+        this.bottleAreaTopY = this.globalHeight * 0.15;
+        this.bottleAreaBotY = this.globalHeight * 0.85;
+        this.glassAreaTopY = this.globalHeight * 0.95;
 
         this.pourAnimation = new PourAnimation(this);
 
@@ -49,41 +70,42 @@ export class GameScene extends Phaser.Scene {
         const fs = this.responsiveFontSizes();
 
         /* UI Elements */
-        this.levelText = this.add.text(this.globalWidth / 2, this.globalHeight * 0.08, `LEVEL ${this.currentLevel}`, {
-            fontSize: `${fs.subtitle}px`,
-            color: "#aaaaaa",
-            fontStyle: "bold"
+        this.levelText = this.add.text(this.globalWidth / 2, this.globalHeight * 0.075, `${this.currentLevel}`, {
+            fontSize: `${fs.level}px`,
+            color: "#FFFFFF",
+            fontStyle: "bold",
+            fontFamily: 'Arial'
         }).setOrigin(0.5);
 
         this.moveCountText = this.add.text(this.globalWidth / 2, this.globalHeight * 0.88, `Moves: 0`, {
             fontSize: `${fs.body}px`,
-            color: "#ffffff"
+            color: "#ffffff",
+            fontFamily: 'Arial'
         }).setOrigin(0.5);
 
-        const restartBtn = this.add.text(this.globalWidth / 2, this.globalHeight * 0.93, "🔄 Restart", {
-            fontSize: `${fs.body}px`,
-            color: "#ffffff",
-            backgroundColor: "#333333",
-            padding: { x: 10, y: 5 }
-        }).setOrigin(0.5).setInteractive({ useHandCursor: true });
+        const iconSize = 64;
+        const restartBtn = this.add.image(100, this.globalHeight * 0.075, 'restart-icon')
+            .setDisplaySize(iconSize, iconSize)
+            .setTint(0xffffff)
+            .setTintFill(0xffffff)
+            .setInteractive({ useHandCursor: true });
 
         restartBtn.on('pointerdown', () => this.startNewGame());
-        restartBtn.on('pointerover', () => restartBtn.setStyle({ backgroundColor: '#555555' }));
-        restartBtn.on('pointerout', () => restartBtn.setStyle({ backgroundColor: '#333333' }));
+        restartBtn.on('pointerover', () => restartBtn.setTint(0xaaaaaa));
+        restartBtn.on('pointerout', () => restartBtn.setTint(0xffffff));
 
-        this.addBottleBtn = this.add.text(this.globalWidth / 2, this.globalHeight * 0.83, "+ Glass (2)", {
-            fontSize: `${fs.body}px`,
-            color: "#ffffff",
-            backgroundColor: "#2a6e2a",
-            padding: { x: 10, y: 5 }
-        }).setOrigin(0.5).setInteractive({ useHandCursor: true });
-
-        this.addBottleBtn.on('pointerdown', () => this.addExtraBottle());
-        this.addBottleBtn.on('pointerover', () => {
-            if (this.extraBottlesUsed < this.maxGlasses()) this.addBottleBtn.setStyle({ backgroundColor: '#3a8e3a' });
+        const addBottleBtn = this.add.image(this.globalWidth * 0.8, this.globalHeight * 0.075, 'add-icon')
+            .setDisplaySize(iconSize, iconSize)
+            .setTint(0xffffff)
+            .setTintFill(0xffffff)
+            .setInteractive({ useHandCursor: true });
+        
+        addBottleBtn.on('pointerdown', () => this.addExtraBottle());
+        addBottleBtn.on('pointerover', () => {
+            if (this.extraBottlesUsed < this.maxGlasses()) addBottleBtn.setTint(0xaaaaaa);
         });
-        this.addBottleBtn.on('pointerout', () => {
-            if (this.extraBottlesUsed < this.maxGlasses()) this.addBottleBtn.setStyle({ backgroundColor: '#2a6e2a' });
+        addBottleBtn.on('pointerout', () => {
+            if (this.extraBottlesUsed < this.maxGlasses()) addBottleBtn.setTint(0xffffff);
         });
 
         this.specialText = this.add.text(this.globalWidth / 2, this.globalHeight * 0.115, '', {
@@ -106,6 +128,23 @@ export class GameScene extends Phaser.Scene {
         this.resetBtn.on('pointerover', () => this.resetBtn.setStyle({ backgroundColor: '#cc4444' }));
         this.resetBtn.on('pointerout', () => this.resetBtn.setStyle({ backgroundColor: '#aa3333' }));
 
+        this.input.on('wheel', (_pointer: Phaser.Input.Pointer, _go: any[], _dx: number, dy: number) => {
+            this.scrollBottles(dy * 0.5);
+        });
+
+        this.input.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
+            this.pointerStartY = pointer.y;
+            this.pointerStartScrollOffset = this.scrollOffset;
+            this.isScrollDrag = pointer.y >= this.bottleAreaTopY && pointer.y <= this.bottleAreaBotY;
+        });
+
+        this.input.on('pointermove', (pointer: Phaser.Input.Pointer) => {
+            if (pointer.isDown && this.isScrollDrag && this.maxScrollOffset > 0) {
+                const dy = this.pointerStartY - pointer.y;
+                this.setScrollOffset(this.pointerStartScrollOffset + dy);
+            }
+        });
+
         this.updateUI();
     }
 
@@ -114,7 +153,7 @@ export class GameScene extends Phaser.Scene {
             this.moveCountText.setText(`Moves: ${this.gameState.moveCount}`);
         }
         if (this.levelText) {
-            this.levelText.setText(`Level ${this.currentLevel}`);
+            this.levelText.setText(`${this.currentLevel}`);
         }
         if (this.specialText) {
             this.specialText.setText(this.gameState.isSpecial ? '\u2726 Mystery Level \u2726' : '');
@@ -122,11 +161,43 @@ export class GameScene extends Phaser.Scene {
         this.updateAddBottleBtn();
     }
 
+    private scrollBottles(delta: number): void {
+        this.setScrollOffset(this.scrollOffset + delta);
+    }
+
+    private setScrollOffset(offset: number): void {
+        if (this.maxScrollOffset <= 0) return;
+
+        this.scrollOffset = Phaser.Math.Clamp(offset, 0, this.maxScrollOffset);
+
+        this.bottles.forEach((bottle, i) => {
+            const basePos = this.bottleBasePositions[i];
+            const newY = basePos.y - this.scrollOffset;
+            this.tweens.killTweensOf(bottle);
+            bottle.setOriginalY(newY);
+            bottle.y = bottle.isSelected() ? newY - 20 : newY;
+        });
+    }
+
+    private getAllSprites(): BottleSprite[] {
+        return [...this.bottles, ...this.glassSprites];
+    }
+
+    private isBottleVisible(bottle: BottleSprite): boolean {
+        const halfH = (bottle.height * bottle.scaleY) / 2;
+        return bottle.y + halfH > this.bottleAreaTopY && bottle.y - halfH < this.bottleAreaBotY;
+    }
+
     private startNewGame(): void {
         this.bottles.forEach(bottle => bottle.destroy());
         this.bottles = [];
+        this.glassSprites.forEach(glass => glass.destroy());
+        this.glassSprites = [];
         this.selectedBottle = null;
         this.extraBottlesUsed = 0;
+        this.scrollOffset = 0;
+        this.maxScrollOffset = 0;
+        this.bottleBasePositions = [];
         
         if (this.resetBtn) this.resetBtn.setVisible(false);
         this.updateAddBottleBtn();
@@ -151,6 +222,7 @@ export class GameScene extends Phaser.Scene {
         }
 
         this.createBottleSprites();
+        this.createGlassSprites();
 
         this.updateUI();
 
@@ -160,65 +232,70 @@ export class GameScene extends Phaser.Scene {
     private createBottleSprites(): void {
         const w = this.globalWidth;
         const h = this.globalHeight;
-        const numBottles = this.gameState.bottles.length;
+        const regularBottles = this.gameState.bottles.filter(b => !b.isGlass);
+        const numBottles = regularBottles.length;
+        if (numBottles === 0) return;
 
-        // --- Available area for the bottle grid ---
-        const areaTopY = h * 0.13;
-        const areaBotY = h * 0.78;
-        const areaH = areaBotY - areaTopY;
-        const sidePadding = 20;
+        // available bottle grid area
+        const areaTopY = this.bottleAreaTopY;
+        const areaH = this.bottleAreaBotY - areaTopY;
+        const sidePadding = 0;
         const usableWidth = w - sidePadding * 2;
 
-        // Reference bottle dimensions (unscaled)
         const refBottleW = 60;
         const refBottleH = 160;
-        // Minimum gap between bottle edges
+
         const gapX = 28;
         const gapY = 45;
 
         const maxPerRow = 4;
 
-        // Determine rows needed
         const bottlesPerRow = Math.min(numBottles, maxPerRow);
         const rows = Math.ceil(numBottles / bottlesPerRow);
 
-        // --- Compute the largest scale at which everything fits ---
-        // Horizontal constraint: (bottlesPerRow * W + (bottlesPerRow-1) * gap) <= usableWidth
+        // --- Compute scale: horizontal + mobile constraints, allow vertical overflow ---
         const maxScaleX = bottlesPerRow > 1
             ? (usableWidth - (bottlesPerRow - 1) * gapX) / (bottlesPerRow * refBottleW)
             : usableWidth / refBottleW;
-        // Vertical constraint: (rows * H + (rows-1) * gap) <= areaH
-        const maxScaleY = rows > 1
-            ? (areaH - (rows - 1) * gapY) / (rows * refBottleH)
-            : areaH / refBottleH;
 
-        // Also apply the base mobile scale
         const mobileScale = Math.min(1, w / 500, h / 700);
 
-        const bottleScale = Math.max(0.4, Math.min(mobileScale, maxScaleX, maxScaleY, 1));
+        const bottleScale = Math.max(0.5, Math.min(mobileScale, maxScaleX, 1));
 
-        const scaledBottleW = refBottleW * bottleScale;
         const scaledBottleH = refBottleH * bottleScale;
 
-        // Spacing between bottle centres
         const spacingX = bottlesPerRow > 1
             ? Math.min(
                 (usableWidth) / (bottlesPerRow - 1),
-                scaledBottleW + gapX
+                refBottleW * bottleScale + gapX
               )
             : 0;
 
-        const spacingY = rows > 1
-            ? Math.min(
-                areaH / rows,
-                scaledBottleH + gapY
-              )
-            : 0;
+        const spacingY = scaledBottleH + gapY * bottleScale;
 
         const totalGridH = (rows - 1) * spacingY;
-        const startY = areaTopY + (areaH - totalGridH) / 2;
+        const visualGridH = totalGridH + scaledBottleH;
 
-        this.gameState.bottles.forEach((bottleData, index) => {
+        // scroll bounds (account for full bottle height)
+        this.maxScrollOffset = Math.max(0, visualGridH - areaH);
+        this.scrollOffset = Math.min(this.scrollOffset, this.maxScrollOffset);
+
+        // center vertically if it fits, otherwise offset so first row isnt clipped
+        const startY = visualGridH <= areaH
+            ? areaTopY + (areaH - totalGridH) / 2
+            : areaTopY + scaledBottleH / 2;
+
+        // bottle area mask
+        const maskPad = scaledBottleH * 0.20;
+        if (this.bottleMaskShape) this.bottleMaskShape.destroy();
+        this.bottleMaskShape = this.make.graphics({}, false);
+        this.bottleMaskShape.fillStyle(0xffffff);
+        this.bottleMaskShape.fillRect(0, this.bottleAreaTopY - maskPad, w, areaH + maskPad * 2);
+        const mask = this.bottleMaskShape.createGeometryMask();
+
+        this.bottleBasePositions = [];
+
+        regularBottles.forEach((bottleData, index) => {
             const row = Math.floor(index / bottlesPerRow);
             const col = index % bottlesPerRow;
 
@@ -230,18 +307,61 @@ export class GameScene extends Phaser.Scene {
             const startX = (w - rowWidth) / 2;
 
             const x = startX + col * spacingX;
-            const y = startY + row * spacingY;
+            const baseY = startY + row * spacingY;
+            const y = baseY - this.scrollOffset;
+
+            this.bottleBasePositions.push({ x, y: baseY });
 
             const bottle = new BottleSprite(this, x, y, bottleData);
             bottle.setScale(bottleScale);
+            bottle.setMask(mask);
 
-            bottle.on('pointerdown', () => this.onBottleClick(bottle));
+            bottle.on('pointerup', (pointer: Phaser.Input.Pointer) => {
+                const dist = Math.abs(pointer.y - this.pointerStartY);
+                if (dist < 10 && this.isBottleVisible(bottle)) {
+                    this.onBottleClick(bottle);
+                }
+            });
 
             this.bottles.push(bottle);
         });
     }
 
+    private createGlassSprites(): void {
+        this.glassSprites.forEach(g => g.destroy());
+        this.glassSprites = [];
+
+        const glasses = this.gameState.bottles.filter(b => b.isGlass);
+        if (glasses.length === 0) return;
+
+        const w = this.globalWidth;
+        const glassScale = Math.min(1, w / 500);
+        const gapX = 20;
+        const glassRefW = 56;
+        const scaledGlassW = glassRefW * glassScale;
+        const totalW = glasses.length * scaledGlassW + (glasses.length - 1) * gapX;
+        const startX = (w - totalW) / 2 + scaledGlassW / 2;
+        const y = this.glassAreaTopY;
+
+        glasses.forEach((glassData, index) => {
+            const x = startX + index * (scaledGlassW + gapX);
+            const glass = new BottleSprite(this, x, y, glassData);
+            glass.setScale(glassScale);
+
+            glass.on('pointerup', (pointer: Phaser.Input.Pointer) => {
+                const dist = Math.abs(pointer.y - this.pointerStartY);
+                if (dist < 10) {
+                    this.onBottleClick(glass);
+                }
+            });
+
+            this.glassSprites.push(glass);
+        });
+    }
+
     private onBottleClick(bottle: BottleSprite): void {
+        if (this.pourAnimation.isPlaying()) return;
+
         if (this.selectedBottle === null) {
             if (!bottle.isEmpty()) {
                 this.selectedBottle = bottle;
@@ -270,15 +390,16 @@ export class GameScene extends Phaser.Scene {
                         this.gameState.moveCount++;
                         this.moveCountText.setText(`Moves: ${this.gameState.moveCount}`);
                         
-                        this.bottles.forEach(b => b.drawLiquids());
+                        this.getAllSprites().forEach(b => b.drawLiquids());
 
                         this.saveGame();
 
-                        this.bottles.forEach(b => b.setInteractive({ useHandCursor: true }));
+                        this.getAllSprites().forEach(b => b.setInteractive({ useHandCursor: true }));
                         
-                        if (checkWin(this.bottles)) {
+                        const allSprites = this.getAllSprites();
+                        if (checkWin(allSprites)) {
                             this.showWinMessage();
-                        } else if (isGameStuck(this.bottles)) {
+                        } else if (isGameStuck(allSprites)) {
                             this.showStuckMessage();
                         }
                     }
@@ -315,10 +436,8 @@ export class GameScene extends Phaser.Scene {
         const newBottleData = { colors: [], slots: 1, isGlass: true };
         this.gameState.bottles.push(newBottleData);
 
-        // Recreate all bottle sprites with updated layout
-        this.bottles.forEach(bottle => bottle.destroy());
-        this.bottles = [];
-        this.createBottleSprites();
+        // Only recreate glass sprites, not the entire bottle grid
+        this.createGlassSprites();
 
         this.updateAddBottleBtn();
         this.saveGame();
@@ -344,21 +463,21 @@ export class GameScene extends Phaser.Scene {
         const fs = this.responsiveFontSizes();
         const overlay = this.add.rectangle(0, 0, w * 2, h * 2, 0x000000, 0.8);
 
-        this.bottles.forEach(bottle => bottle.disableInteractive());
+        this.getAllSprites().forEach(bottle => bottle.disableInteractive());
 
         const winText = this.add.text(w / 2, h * 0.32, "🎉 You Win! 🎉", {
-            fontSize: `${fs.title + 8}px`,
+            fontSize: `${fs.body + 8}px`,
             color: "#FFD700",
             fontStyle: "bold"
         }).setOrigin(0.5);
 
         const movesText = this.add.text(w / 2, h * 0.40, `Completed in ${this.gameState.moveCount} moves`, {
-            fontSize: `${fs.subtitle}px`,
+            fontSize: `${fs.body}px`,
             color: "#ffffff"
         }).setOrigin(0.5);
 
         const nextBtn = this.add.text(w / 2, h * 0.48, "Next Level →", {
-            fontSize: `${fs.subtitle}px`,
+            fontSize: `${fs.body}px`,
             color: "#ffffff",
             backgroundColor: "#4CAF50",
             padding: { x: 20, y: 10 }
@@ -383,10 +502,10 @@ export class GameScene extends Phaser.Scene {
         const fs = this.responsiveFontSizes();
         const overlay = this.add.rectangle(0, 0, w * 2, h * 2, 0x000000, 0.8);
 
-        this.bottles.forEach(bottle => bottle.disableInteractive());
+        this.getAllSprites().forEach(bottle => bottle.disableInteractive());
 
         const stuckText = this.add.text(w / 2, h * 0.32, 'No Moves Left!', {
-            fontSize: `${fs.title + 4}px`,
+            fontSize: `${fs.body + 4}px`,
             color: '#FF6B6B',
             fontStyle: 'bold'
         }).setOrigin(0.5);
@@ -397,7 +516,7 @@ export class GameScene extends Phaser.Scene {
         }).setOrigin(0.5);
 
         const resetBtn = this.add.text(w / 2, h * 0.48, '🔄 Reset Level', {
-            fontSize: `${fs.subtitle}px`,
+            fontSize: `${fs.body}px`,
             color: '#ffffff',
             backgroundColor: '#aa3333',
             padding: { x: 20, y: 10 }
@@ -427,8 +546,8 @@ export class GameScene extends Phaser.Scene {
 
         closeBtn.on('pointerdown', () => {
             destroyOverlay();
-            // Re-enable bottles and show persistent reset button
             this.bottles.forEach(b => b.setInteractive({ useHandCursor: true }));
+            this.glassSprites.forEach(b => b.setInteractive({ useHandCursor: true }));
             this.resetBtn.setVisible(true);
         });
         closeBtn.on('pointerover', () => closeBtn.setStyle({ backgroundColor: '#666666' }));
@@ -444,7 +563,7 @@ export class GameScene extends Phaser.Scene {
             };
             localStorage.setItem(SAVE_KEY, JSON.stringify(data));
         } catch {
-            // localStorage may be unavailable; silently ignore
+            // localStorage may be unavailable
         }
     }
 
@@ -466,11 +585,16 @@ export class GameScene extends Phaser.Scene {
             this.extraBottlesUsed = data.extraBottlesUsed ?? 0;
             this.gameState = data.gameState;
 
-            // Rebuild sprites from restored state
             this.bottles.forEach(b => b.destroy());
             this.bottles = [];
+            this.glassSprites.forEach(g => g.destroy());
+            this.glassSprites = [];
             this.selectedBottle = null;
+            this.scrollOffset = 0;
+            this.maxScrollOffset = 0;
+            this.bottleBasePositions = [];
             this.createBottleSprites();
+            this.createGlassSprites();
             this.updateAddBottleBtn();
 
             return true;
@@ -483,8 +607,7 @@ export class GameScene extends Phaser.Scene {
         const w = this.globalWidth;
         const base = Math.min(w, 600);
         return {
-            title:    Math.round(Math.max(20, base * 0.055)),
-            subtitle: Math.round(Math.max(16, base * 0.04)),
+            level: Math.round(Math.max(42, base * 0.055)),
             body:     Math.round(Math.max(14, base * 0.032)),
             small:    Math.round(Math.max(12, base * 0.028)),
         };
