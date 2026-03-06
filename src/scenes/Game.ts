@@ -70,14 +70,14 @@ export class GameScene extends Phaser.Scene {
         const fs = this.responsiveFontSizes();
 
         /* UI Elements */
-        this.levelText = this.add.text(this.globalWidth / 2, this.globalHeight * 0.075, `${this.currentLevel}`, {
+        this.levelText = this.add.text(this.globalWidth / 2, this.globalHeight * 0.06, `${this.currentLevel}`, {
             fontSize: `${fs.level}px`,
             color: "#FFFFFF",
             fontStyle: "bold",
             fontFamily: 'Arial'
         }).setOrigin(0.5);
 
-        this.moveCountText = this.add.text(this.globalWidth / 2, this.globalHeight * 0.88, `Moves: 0`, {
+        this.moveCountText = this.add.text(this.globalWidth / 2, this.globalHeight * 0.1, `Moves: 0`, {
             fontSize: `${fs.body}px`,
             color: "#ffffff",
             fontFamily: 'Arial'
@@ -87,26 +87,16 @@ export class GameScene extends Phaser.Scene {
         const restartBtn = this.add.image(100, this.globalHeight * 0.075, 'restart-icon')
             .setDisplaySize(iconSize, iconSize)
             .setTint(0xffffff)
-            .setTintFill(0xffffff)
             .setInteractive({ useHandCursor: true });
 
         restartBtn.on('pointerdown', () => this.startNewGame());
-        restartBtn.on('pointerover', () => restartBtn.setTint(0xaaaaaa));
-        restartBtn.on('pointerout', () => restartBtn.setTint(0xffffff));
 
         const addBottleBtn = this.add.image(this.globalWidth * 0.8, this.globalHeight * 0.075, 'add-icon')
             .setDisplaySize(iconSize, iconSize)
             .setTint(0xffffff)
-            .setTintFill(0xffffff)
             .setInteractive({ useHandCursor: true });
         
         addBottleBtn.on('pointerdown', () => this.addExtraBottle());
-        addBottleBtn.on('pointerover', () => {
-            if (this.extraBottlesUsed < this.maxGlasses()) addBottleBtn.setTint(0xaaaaaa);
-        });
-        addBottleBtn.on('pointerout', () => {
-            if (this.extraBottlesUsed < this.maxGlasses()) addBottleBtn.setTint(0xffffff);
-        });
 
         this.specialText = this.add.text(this.globalWidth / 2, this.globalHeight * 0.115, '', {
             fontSize: `${fs.small}px`,
