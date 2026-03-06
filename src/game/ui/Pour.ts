@@ -57,11 +57,16 @@ export class PourAnimation {
         try {
             await this.tiltBottle(source, tiltAngle, offsetX, offsetY);
 
+            // Play one pouring sound for the whole grouped pour (multiple same-colored segments)
+            if (segmentsToPour > 0) {
+                this.playPourSound();
+            }
+
             for (let i = 0; i < segmentsToPour; i++) {
                 source.removeTopColor();
-                
+
                 await this.animateStream(source, target, color, pourLeft);
-                
+
                 target.addColor(color);
             }
 
@@ -136,7 +141,6 @@ export class PourAnimation {
                     this.drawStream(startX, startY, endX, endY, controlX, controlY, progress, colorNum, streamWidth);
                 },
                 onComplete: () => {
-                    this.playPourSound();
                     this.playSplashEffect(endX, endY, colorNum);
                     this.streamGraphics.clear();
                     resolve();
