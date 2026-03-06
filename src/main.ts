@@ -20,9 +20,9 @@ const game = new Phaser.Game(config as any);
  * Usage in browser console: setLevel(15)
  */
 (window as any).setLevel = (level: number) => {
-  const scene = game.scene.getScene('GameScene') as GameScene;
+  const scene = game.scene.getScene('ColorSort') as GameScene;
   if (!scene) {
-    console.error('GameScene not found');
+    console.error('ColorSort game scene not found');
     return;
   }
   scene.jumpToLevel(level);

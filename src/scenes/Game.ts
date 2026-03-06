@@ -45,7 +45,7 @@ export class GameScene extends Phaser.Scene {
     private isScrollDrag: boolean = false;
 
     constructor() {
-        super({ key: 'Color Sort' });
+        super({ key: 'ColorSort' });
     }
 
     preload() {
