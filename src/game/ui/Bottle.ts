@@ -27,13 +27,13 @@ export class BottleSprite extends Phaser.GameObjects.Container {
     private static readonly GLASS_BASE_HEIGHT = 6;
     private static readonly GLASS_TOTAL_HEIGHT = 80;
 
-    private static readonly REF_SLOTS = 4;
+    /* private static readonly REF_SLOTS = 4; */
     private static readonly REF_WIDTH = 75;
     private static readonly REF_HEIGHT = 180;
     private static readonly REF_NECK_WIDTH = 30;
     private static readonly REF_NECK_HEIGHT = 15;
-    private static readonly MAX_SCALE = 1.25;
-    private static readonly MIN_SCALE = 1;
+    /* private static readonly MAX_SCALE = 1.25;
+    private static readonly MIN_SCALE = 1; */
 
     constructor(scene: Phaser.Scene, x: number, y: number, bottleData: BottleData) {
         super(scene, x, y);
