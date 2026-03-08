@@ -9,7 +9,7 @@ import type { GameState, SetupOptions } from '../game/logic/types';
 interface SaveData {
     currentLevel: number;
     gameState: GameState;
-    extraBottlesUsed: number;
+    extraGlassesUsed: number;
 }
 
 const SAVE_KEY = 'color-sort-save';
@@ -22,10 +22,10 @@ export class GameScene extends Phaser.Scene {
     private levelText!: Phaser.GameObjects.Text;
     private currentLevel: number = 1;
     private pourAnimation!: PourAnimation;
-    private extraBottlesUsed: number = 0;
-    private newBottleLevelThreshold: number = 12;
+    private extraGlassesUsed: number = 0;
+    private newBottleLevelThreshold: number = 20;
     private newGlassLevelThreshold: number = 20;
-    private addBottleBtn!: Phaser.GameObjects.Text;
+    private addGlassBtn!: Phaser.GameObjects.Text;
     private specialText!: Phaser.GameObjects.Text;
     private resetBtn!: Phaser.GameObjects.Text;
 
@@ -91,12 +91,12 @@ export class GameScene extends Phaser.Scene {
 
         restartBtn.on('pointerdown', () => this.startNewGame());
 
-        const addBottleBtn = this.add.image(this.globalWidth * 0.8, this.globalHeight * 0.075, 'add-icon')
+        const addGlassBtn = this.add.image(this.globalWidth * 0.8, this.globalHeight * 0.075, 'add-icon')
             .setDisplaySize(iconSize, iconSize)
             .setTint(0xffffff)
             .setInteractive({ useHandCursor: true });
         
-        addBottleBtn.on('pointerdown', () => this.addExtraBottle());
+        addGlassBtn.on('pointerdown', () => this.addExtraGlass());
 
         this.specialText = this.add.text(this.globalWidth / 2, this.globalHeight * 0.115, '', {
             fontSize: `${fs.small}px`,
@@ -148,7 +148,7 @@ export class GameScene extends Phaser.Scene {
         if (this.specialText) {
             this.specialText.setText(this.gameState.isSpecial ? '\u2726 Mystery Level \u2726' : '');
         }
-        this.updateAddBottleBtn();
+        this.updateAddGlassBtn();
     }
 
     private scrollBottles(delta: number): void {
@@ -184,22 +184,22 @@ export class GameScene extends Phaser.Scene {
         this.glassSprites.forEach(glass => glass.destroy());
         this.glassSprites = [];
         this.selectedBottle = null;
-        this.extraBottlesUsed = 0;
+        this.extraGlassesUsed = 0;
         this.scrollOffset = 0;
         this.maxScrollOffset = 0;
         this.bottleBasePositions = [];
         
         if (this.resetBtn) this.resetBtn.setVisible(false);
-        this.updateAddBottleBtn();
+        this.updateAddGlassBtn();
 
         const bonusEmptyBottles = Math.floor(this.currentLevel / this.newBottleLevelThreshold);
         const bonusGlasses = Math.floor(this.currentLevel / this.newGlassLevelThreshold);
-        const baseColors = Math.min(4 + Math.floor(this.currentLevel / 3), 10);
+        const baseColors = Math.min(4 + Math.floor(this.currentLevel / 6), 10);
         const numColors = Math.min(baseColors + bonusEmptyBottles + bonusGlasses, PRESET_COLORS.length);
 
         const options: SetupOptions = {
             numColors,
-            slotsPerBottle: Math.min(4 + Math.floor(this.currentLevel / 5), 10),
+            slotsPerBottle: Math.min(3 + Math.floor(this.currentLevel / 10), 10),
             emptyBottles: 2 + bonusEmptyBottles
         };
 
@@ -412,8 +412,8 @@ export class GameScene extends Phaser.Scene {
         return 2 + Math.floor(this.currentLevel / this.newGlassLevelThreshold);
     }
 
-    private addExtraBottle(): void {
-        if (this.extraBottlesUsed >= this.maxGlasses()) return;
+    private addExtraGlass(): void {
+        if (this.extraGlassesUsed >= this.maxGlasses()) return;
         if (this.pourAnimation.isPlaying()) return;
 
         if (this.selectedBottle) {
@@ -421,29 +421,28 @@ export class GameScene extends Phaser.Scene {
             this.selectedBottle = null;
         }
 
-        this.extraBottlesUsed++;
+        this.extraGlassesUsed++;
 
-        const newBottleData = { colors: [], slots: 1, isGlass: true };
-        this.gameState.bottles.push(newBottleData);
+        const newGlassData = { colors: [], slots: 1, isGlass: true };
+        this.gameState.bottles.push(newGlassData);
 
-        // Only recreate glass sprites, not the entire bottle grid
         this.createGlassSprites();
 
-        this.updateAddBottleBtn();
+        this.updateAddGlassBtn();
         this.saveGame();
     }
 
-    private updateAddBottleBtn(): void {
-        if (!this.addBottleBtn) return;
-        const remaining = this.maxGlasses() - this.extraBottlesUsed;
+    private updateAddGlassBtn(): void {
+        if (!this.addGlassBtn) return;
+        const remaining = this.maxGlasses() - this.extraGlassesUsed;
         if (remaining <= 0) {
-            this.addBottleBtn.setText("+ Glass (0)");
-            this.addBottleBtn.setStyle({ backgroundColor: '#555555', color: '#888888' });
-            this.addBottleBtn.disableInteractive();
+            this.addGlassBtn.setText("+ Glass (0)");
+            this.addGlassBtn.setStyle({ backgroundColor: '#555555', color: '#888888' });
+            this.addGlassBtn.disableInteractive();
         } else {
-            this.addBottleBtn.setText(`+ Glass (${remaining})`);
-            this.addBottleBtn.setStyle({ backgroundColor: '#2a6e2a', color: '#ffffff' });
-            this.addBottleBtn.setInteractive({ useHandCursor: true });
+            this.addGlassBtn.setText(`+ Glass (${remaining})`);
+            this.addGlassBtn.setStyle({ backgroundColor: '#2a6e2a', color: '#ffffff' });
+            this.addGlassBtn.setInteractive({ useHandCursor: true });
         }
     }
 
@@ -549,7 +548,7 @@ export class GameScene extends Phaser.Scene {
             const data: SaveData = {
                 currentLevel: this.currentLevel,
                 gameState: this.gameState,
-                extraBottlesUsed: this.extraBottlesUsed,
+                extraGlassesUsed: this.extraGlassesUsed,
             };
             localStorage.setItem(SAVE_KEY, JSON.stringify(data));
         } catch {
@@ -572,7 +571,7 @@ export class GameScene extends Phaser.Scene {
             if (!data.gameState || !Array.isArray(data.gameState.bottles)) return false;
 
             this.currentLevel = data.currentLevel ?? 1;
-            this.extraBottlesUsed = data.extraBottlesUsed ?? 0;
+            this.extraGlassesUsed = data.extraGlassesUsed ?? 0;
             this.gameState = data.gameState;
 
             this.bottles.forEach(b => b.destroy());
@@ -585,7 +584,7 @@ export class GameScene extends Phaser.Scene {
             this.bottleBasePositions = [];
             this.createBottleSprites();
             this.createGlassSprites();
-            this.updateAddBottleBtn();
+            this.updateAddGlassBtn();
 
             return true;
         } catch {

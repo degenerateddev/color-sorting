@@ -39,7 +39,7 @@ export class PourAnimation {
         // Kill any lingering tweens (e.g. from deselect) to prevent conflicts
         this.scene.tweens.killTweensOf(source);
 
-        // Use the bottle's true resting position, not the current (possibly mid-tween) y
+        // Use the bottle's true resting position, not the current (possibly mid-tween)
         const originalX = source.x;
         const originalY = source.getOriginalY();
         source.y = originalY;
@@ -57,7 +57,6 @@ export class PourAnimation {
         try {
             await this.tiltBottle(source, tiltAngle, offsetX, offsetY);
 
-            // Play one pouring sound for the whole grouped pour (multiple same-colored segments)
             if (segmentsToPour > 0) {
                 this.playPourSound();
             }
